@@ -1,36 +1,116 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Allo Inventory — Reservation System
 
-## Getting Started
+**Live Demo:** https://allo-inventory-delta-brown.vercel.app
 
-First, run the development server:
+**GitHub Repository:** https://github.com/Raju-coder123/allo-inventory
+
+## Overview
+
+Allo Inventory is a full-stack inventory reservation system built with **Next.js**, **Prisma**, **PostgreSQL (Supabase)**, and **Upstash Redis**. It prevents overselling by reserving inventory for a limited time and automatically releasing expired reservations.
+
+---
+
+## Features
+
+* Product listing
+* Inventory reservation
+* Reservation countdown timer
+* Purchase confirmation
+* Automatic reservation expiry
+* Concurrency-safe inventory updates
+* Redis-backed reservation management
+* Vercel deployment
+
+---
+
+## Tech Stack
+
+* Next.js (App Router)
+* TypeScript
+* Prisma ORM
+* PostgreSQL (Supabase)
+* Upstash Redis
+* Tailwind CSS
+* Vercel
+
+---
+
+## How to Run Locally
+
+1. Clone the repository
+
+```bash
+git clone https://github.com/Raju-coder123/allo-inventory.git
+```
+
+2. Install dependencies
+
+```bash
+npm install
+```
+
+3. Create a `.env` file and add:
+
+```env
+DATABASE_URL=
+DIRECT_URL=
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+```
+
+4. Run database migrations
+
+```bash
+npx prisma migrate dev
+```
+
+5. Seed the database
+
+```bash
+npx tsx prisma/seed.ts
+```
+
+6. Start the development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Reservation Expiry
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+A Vercel Cron Job calls:
 
-## Learn More
+```
+GET /api/cron/expire
+```
 
-To learn more about Next.js, take a look at the following resources:
+every minute.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Expired reservations are automatically marked as expired and the reserved inventory is released inside a database transaction, making the units available again.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## Concurrency Safety
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The reservation endpoint uses a PostgreSQL transaction with row-level locking (`SELECT FOR UPDATE`).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+If two users try to reserve the last available item simultaneously:
+
+* One request acquires the lock and succeeds.
+* The other waits until the transaction completes.
+* If inventory is no longer available, it receives a **409 Conflict** response.
+
+This prevents double booking and overselling.
+
+---
+
+## Future Improvements
+
+* Idempotency keys for reserve and confirm endpoints
+* Quantity selector
+* User authentication
+* Payment gateway integration
+* Unit and integration tests
+* Admin dashboard
